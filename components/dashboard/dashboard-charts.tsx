@@ -57,20 +57,20 @@ export function DashboardCharts() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-blue-600 border-b border-blue-600 pb-1">
-                    New York
+                    Dubai
                   </span>
                   <span className="text-sm">72K</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">San Francisco</span>
+                  <span className="text-sm font-medium">Abu Dhabi</span>
                   <span className="text-sm">39K</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Sydney</span>
+                  <span className="text-sm font-medium">Al Ain</span>
                   <span className="text-sm">25K</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Singapore</span>
+                  <span className="text-sm font-medium">Fujairah</span>
                   <span className="text-sm">61K</span>
                 </div>
               </div>
@@ -97,20 +97,6 @@ export function DashboardCharts() {
                     <span className="text-sm">Affiliate</span>
                   </div>
                   <span className="text-sm">$135.18</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-300"></div>
-                    <span className="text-sm">Sponsored</span>
-                  </div>
-                  <span className="text-sm">$154.02</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-200"></div>
-                    <span className="text-sm">E-mail</span>
-                  </div>
-                  <span className="text-sm">$48.96</span>
                 </div>
               </div>
             </div>
@@ -160,21 +146,20 @@ function RevenueChart() {
             content={({ active, payload }) => {
               if (active && payload && payload.length) {
                 return (
-                  <ChartTooltipContent
-                    className="border-blue-500"
-                    items={[
-                      {
-                        label: "Current Week",
-                        value: `$${payload[0].value}M`,
-                        color: "#3b82f6",
-                      },
-                      {
-                        label: "Previous Week",
-                        value: `$${payload[1].value}M`,
-                        color: "#10b981",
-                      },
-                    ]}
-                  />
+                  <ChartTooltipContent className="border-blue-500">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#3b82f6" }}></span>
+                        <span className="text-sm font-medium">Current Week</span>
+                        <span className="ml-2 text-sm">{`$${payload[0].value}M`}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: "#10b981" }}></span>
+                        <span className="text-sm font-medium">Previous Week</span>
+                        <span className="ml-2 text-sm">{`$${payload[1].value}M`}</span>
+                      </div>
+                    </div>
+                  </ChartTooltipContent>
                 );
               }
               return null;
@@ -206,8 +191,6 @@ function SalesDonutChart() {
   const data = [
     { name: "Direct", value: 38.6, color: "#3b82f6" },
     { name: "Affiliate", value: 22.5, color: "#60a5fa" },
-    { name: "Sponsored", value: 30.8, color: "#93c5fd" },
-    { name: "E-mail", value: 8.1, color: "#bfdbfe" },
   ];
 
   return (
@@ -260,16 +243,16 @@ function SalesDonutChart() {
             content={({ active, payload }) => {
               if (active && payload && payload.length) {
                 return (
-                  <ChartTooltipContent
-                    className="border-blue-500"
-                    items={[
-                      {
-                        label: payload[0].name,
-                        value: `${payload[0].value}%`,
-                        color: payload[0].payload.color,
-                      },
-                    ]}
-                  />
+                  <ChartTooltipContent className="border-blue-500">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: payload[0].payload.color }}
+                      ></span>
+                      <span className="text-sm font-medium">{payload[0].name}</span>
+                      <span className="ml-2 text-sm">{`${payload[0].value}%`}</span>
+                    </div>
+                  </ChartTooltipContent>
                 );
               }
               return null;

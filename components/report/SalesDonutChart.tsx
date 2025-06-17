@@ -5,8 +5,6 @@ export default function SalesDonutChart() {
   const data = [
     { name: "Direct", value: 38.6, color: "#3b82f6" },
     { name: "Affiliate", value: 22.5, color: "#60a5fa" },
-    { name: "Sponsored", value: 30.8, color: "#93c5fd" },
-    { name: "E-mail", value: 8.1, color: "#bfdbfe" },
   ];
 
   return (
@@ -61,13 +59,9 @@ export default function SalesDonutChart() {
                 return (
                   <ChartTooltipContent
                     className="border-blue-500"
-                    items={[
-                      {
-                        label: payload[0].name,
-                        value: `${payload[0].value}%`,
-                        color: payload[0].payload.color,
-                      },
-                    ]}
+                    label={payload[0].name}
+                    payload={payload}
+                    color={payload[0].payload.color}
                   />
                 );
               }

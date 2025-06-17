@@ -2,10 +2,7 @@ export default interface OrderType {
   id: number;
   status: string;
   createdAt: string;
-  product: {
-    name: string;
-    price: { amount: number; currency: string };
-  };
+  detail: { product: number; quantity: number }[];
   customer: {
     name: string;
     email: string;

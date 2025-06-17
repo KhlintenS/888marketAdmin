@@ -80,7 +80,7 @@ export default function SubCategory({
             <Pencil size={16} />
           </Button>
         </div>
-      </td>{" "}
+      </td>
       {isModalVisible && (
         <td>
           <Modal

@@ -14,7 +14,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import Product from "@/components/products/Product";
 import { useRouter } from "next/navigation";
@@ -22,10 +22,14 @@ import ProductTypes from "@/components/products/type";
 import Error from "@/components/Error";
 import Empty from "@/components/Empty";
 import Modal from "@/components/Modal";
+import { Skeleton } from "@/components/ui/skeleton";
+import FilterMenu from "@/components/FilterMenu";
 
 // Adjust the import path as needed
 
 export default function Products() {
+  const pageSize = 8; // Number of products per page
+
   const {
     products,
     isLoadingProducts,
@@ -39,16 +43,101 @@ export default function Products() {
   const [deleteList, setDeleteList] = useState<number[]>([]);
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 7; // You can adjust this as needed
+  const [showFilter, setShowFilter] = useState(false);
+  const [filters, setFilters] = useState<any>(null);
+  const filterMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close filter menu on click outside or ESC
+  useEffect(() => {
+    if (!showFilter) return;
+
+    function handleClick(e: MouseEvent) {
+      if (
+        filterMenuRef.current &&
+        !filterMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowFilter(false);
+      }
+    }
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setShowFilter(false);
+        setFilters(null); // Clear all filters on ESC
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [showFilter]);
+
+  // Filtering logic
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    if (!filters) return products;
+
+    let result = [...products];
+    console.log("result", result);
+    console.log("filters", filters);
+
+    // Status filter
+    if (filters.status && filters.status.length > 0) {
+      result = result.filter((p) =>
+        filters.status.includes((p.status || "").toLowerCase())
+      );
+    }
+
+    // Category filter
+    if (filters.categories && filters.categories.length > 0) {
+      result = result.filter((p) =>
+        filters.categories.includes(p.category?.id)
+      );
+    }
+
+    // Subcategory filter
+    if (filters.subcategories && filters.subcategories.length > 0) {
+      result = result.filter((p) =>
+        filters.subcategories.includes(p.subcategory?.id)
+      );
+    }
+
+    // Stock level filter
+    if (filters.stockLevels && filters.stockLevels.length > 0) {
+      result = result.filter((p) => {
+        const stock = p.stock ?? 0;
+        if (filters.stockLevels.includes("high") && stock > 20) return true;
+        if (filters.stockLevels.includes("medium") && stock > 0 && stock <= 20)
+          return true;
+        if (filters.stockLevels.includes("low") && stock === 0) return true;
+        return false;
+      });
+    }
+
+    // Price range filter
+    if (filters.priceRange) {
+      const [min, max] = filters.priceRange;
+      result = result.filter((p) => {
+        const price =
+          p.price?.discounted ?? p.price?.orignal ?? p.price?.amount ?? 0;
+        return price >= min && price <= max;
+      });
+    }
+
+    return result;
+  }, [products, filters]);
 
   // Calculate paginated products
   const paginatedProducts = useMemo(() => {
-    if (!products) return [];
+    if (!filteredProducts) return [];
     const start = (currentPage - 1) * pageSize;
-    return products.slice(start, start + pageSize);
-  }, [products, currentPage]);
+    return filteredProducts.slice(start, start + pageSize);
+  }, [filteredProducts, currentPage]);
 
-  const totalPages = products ? Math.ceil(products.length / pageSize) : 1;
+  const totalPages = filteredProducts
+    ? Math.ceil(filteredProducts.length / pageSize)
+    : 1;
 
   const removeFromDeleteList = (id: number) => {
     setDeleteList((prevList) => prevList.filter((item) => item !== id));
@@ -80,16 +169,8 @@ export default function Products() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              disabled={isError || isLoadingProducts || !products?.length}
-            >
-              <Filter size={16} />
-              Filter
-            </Button>
+          <div className="flex items-center gap-4 relative">
+            {/* Search Input */}
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
               <input
@@ -98,6 +179,34 @@ export default function Products() {
                 placeholder="Search products..."
                 className="pl-9 h-9 w-[250px] rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            {/* Filter Button (beside search) */}
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 bg-blue-600 hover:bg-blue-700 text-white hover:text-white w-[120px] text-left"
+                onClick={() => setShowFilter((v) => !v)}
+                disabled={isError || isLoadingProducts || !products?.length}
+              >
+                <Filter size={16} />
+                Filter
+              </Button>
+              {showFilter && (
+                <div
+                  className="absolute -left-3 top-8 z-30"
+                  ref={filterMenuRef}
+                  tabIndex={-1}
+                >
+                  <FilterMenu
+                    onApply={(appliedFilters: any) => {
+                      setFilters(appliedFilters);
+                      setShowFilter(false);
+                      setCurrentPage(1);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -121,16 +230,16 @@ export default function Products() {
         </CardHeader>
         <CardContent className="p-0">
           {/* Showing dash */}
-          {products && products.length > 7 && (
+          {filteredProducts && filteredProducts.length > 7 && (
             <div className="px-4 py-2 text-sm text-gray-500">
               Showing {(currentPage - 1) * pageSize + 1}-
-              {Math.min(currentPage * pageSize, products.length)} of{" "}
-              {products.length}
+              {Math.min(currentPage * pageSize, filteredProducts.length)} of{" "}
+              {filteredProducts.length}
             </div>
           )}
           <div className="overflow-x-auto">
             <table className="w-full">
-              {!isError && products?.length ? (
+              {!isError && filteredProducts?.length ? (
                 <thead>
                   <tr className="border-b border-gray-100">
                     <th className="w-10 p-4">
@@ -172,13 +281,39 @@ export default function Products() {
               ) : null}
               <tbody>
                 {isLoadingProducts ? (
-                  <tr>
-                    <td className="px-4 py-10" colSpan={7}>
-                      <div className="flex justify-center items-center w-full">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                      </div>
-                    </td>
-                  </tr>
+                  <>
+                    {Array.from({ length: pageSize }).map((_, idx) => (
+                      <tr key={idx}>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-6 rounded" />
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <Skeleton className="size-[40px] rounded-full" />
+                            <Skeleton className="h-4 w-24 rounded" />
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-20 rounded" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-20 rounded" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-16 rounded" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-12 rounded" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-6 w-16 rounded" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-8 w-16 rounded" />
+                        </td>
+                      </tr>
+                    ))}
+                  </>
                 ) : isError ? (
                   <tr>
                     <td colSpan={8}>
@@ -188,7 +323,7 @@ export default function Products() {
                       />
                     </td>
                   </tr>
-                ) : !products?.length ? (
+                ) : !filteredProducts?.length ? (
                   <tr>
                     <td colSpan={8}>
                       <Empty
@@ -216,7 +351,7 @@ export default function Products() {
             </table>
           </div>
           {/* Pagination Controls */}
-          {products && products.length > pageSize && (
+          {filteredProducts && filteredProducts.length > pageSize && (
             <div className="flex justify-center items-center gap-2 py-4">
               <Button
                 className="size-[35px] rounded-full grid place-items-center"

@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { useCategories } from "@/hooks/useCategories";
 import Category from "@/components/categories/Category";
@@ -152,13 +153,27 @@ export default function Categories() {
               ) : null}
               <tbody>
                 {isLoadingCategories ? (
-                  <tr>
-                    <td className="px-4 py-10" colSpan={7}>
-                      <div className="flex justify-center items-center w-full">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                      </div>
-                    </td>
-                  </tr>
+                  <>
+                    {Array.from({ length: pageSize }).map((_, idx) => (
+                      <tr key={idx}>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-6 rounded" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="size-[40px] rounded" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="size-[32px] rounded" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-32 rounded" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-8 w-16 rounded" />
+                        </td>
+                      </tr>
+                    ))}
+                  </>
                 ) : isError ? (
                   <tr>
                     <td colSpan={7}>

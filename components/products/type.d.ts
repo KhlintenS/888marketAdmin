@@ -4,7 +4,9 @@ export default interface ProductTypes {
   description: string;
   price: {
     currency: string;
-    amount: number;
+    amount?: number;
+    orignal?: number;
+    discounted?: number;
   };
   stock: number;
   imgUrls: string[];
@@ -16,4 +18,6 @@ export default interface ProductTypes {
     id: number;
     name: string;
   };
+  createdBy: string | null;
+  status?: string;
 }

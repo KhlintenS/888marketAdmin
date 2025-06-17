@@ -11,6 +11,7 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import { useEffect, useState } from "react";
 import Loader from "@/components/Loader";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 export default function RootLayout({
   children,
@@ -36,6 +37,7 @@ export default function RootLayout({
       </head>
       <body>
         <ReactQueryProvider>
+         
           <AuthProvider>
             <AuthGuard>
               {isLoading ? (

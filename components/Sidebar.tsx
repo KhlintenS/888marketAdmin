@@ -114,6 +114,23 @@ export default function SidebarCmzed() {
           ]}
         />
 
+        {/* approval managment */}
+        {/* <SideBarLinksContainer
+          label="Approval Managment"
+          childLinks={[
+            {
+              href: "/approval/customers",
+              label: "Customers",
+              icon: <Users size={20} />,
+            },
+            {
+              href: "/approval/products",
+              label: "Products",
+              icon: <ShoppingBag size={20} />,
+            },
+          ]}
+        /> */}
+
         {/* Account Settings */}
         <SideBarLinksContainer
           label="Settings"

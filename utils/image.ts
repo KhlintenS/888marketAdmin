@@ -2,6 +2,7 @@ import supabase from "@/lib/config/supabase";
 
 export const uploadImages = async (images: any[], bucket: string) => {
   const uploadedUrls: string[] = [];
+  console.log("images", images);
 
   for (const image of images) {
     try {

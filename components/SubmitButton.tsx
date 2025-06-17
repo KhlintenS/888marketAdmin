@@ -6,6 +6,7 @@ interface SubmitButtonProps {
   isLoading?: boolean;
   label?: string;
   className?: string;
+  disabled?: boolean;
   onClick?: () => void;
 }
 
@@ -13,12 +14,14 @@ export default function SubmitButton({
   isLoading,
   label,
   className,
+  disabled,
   onClick,
 }: SubmitButtonProps) {
   return (
     <Button
       className={`gap-2 rounded-full bg-blue-200 text-blue-800 hover:bg-blue-300 min-w-[9rem] ${className}`}
       onClick={onClick}
+      disabled={disabled}
     >
       {isLoading ? (
         <div className="flex justify-center items-center w-full">

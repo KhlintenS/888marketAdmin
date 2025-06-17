@@ -13,36 +13,78 @@ import { Button } from "@/components/ui/button";
 import { useCustomers } from "@/hooks/useCustomers";
 import Error from "@/components/Error";
 import Empty from "@/components/Empty";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Customer from "@/components/customer/Customer";
 import { Checkbox } from "@/components/ui/checkbox";
 import Modal from "@/components/Modal";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function Customers() {
   const {
     isLoadingCustomers,
-    customers,
+    customers: result, // just for avoiding naming conflict
+    searchedCustomers,
     isError,
     isDeletingCustomer,
+    isSearchingCustomers,
     refetchCustomers,
     deleteCustomers,
+    researchCustomers,
   } = useCustomers();
+
+  const [search, setSearch] = useState("");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const params = new URLSearchParams(searchParams.toString());
+  const keyword = searchParams.get("keyword");
 
   const [isAllSelected, setIsSelectedAll] = useState<boolean>(false);
   const [deleteList, setDeleteList] = useState<number[]>([]);
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 7; // You can adjust this as needed
+  const pageSize = 7;
+  const customers = keyword ? searchedCustomers : result;
+  const queryClient = useQueryClient();
+  const [filter, setFilter] = useState<string>("All");
 
-  // Calculate paginated customers
-  const paginatedCustomers = useMemo(() => {
+  const verificationStatusOptions = [
+    "All",
+    "verified",
+    "unrequested",
+    "requested",
+    "rejected",
+  ];
+
+  // Add filtering logic
+  const filteredCustomers = useMemo(() => {
     if (!customers) return [];
-    const start = (currentPage - 1) * pageSize;
-    return customers.slice(start, start + pageSize);
-  }, [customers, currentPage]);
+    if (filter === "All") return customers;
+    return customers.filter(
+      (c: any) =>
+        (c.verificationStatus || c.verficationStatus || "").toLowerCase() ===
+        filter.toLowerCase()
+    );
+  }, [customers, filter]);
 
-  const totalPages = customers ? Math.ceil(customers.length / pageSize) : 1;
+  // Calculate paginated customers (use filteredCustomers)
+  const paginatedCustomers = useMemo(() => {
+    if (!filteredCustomers) return [];
+    const start = (currentPage - 1) * pageSize;
+    return filteredCustomers.slice(start, start + pageSize);
+  }, [filteredCustomers, currentPage]);
+
+  const totalPages = filteredCustomers
+    ? Math.ceil(filteredCustomers.length / pageSize)
+    : 1;
 
   const removeFromDeleteList = (id: number) => {
     setDeleteList((prevList) => prevList.filter((item) => item !== id));
@@ -56,6 +98,28 @@ export default function Customers() {
     setIsSelectedAll(false);
   };
 
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    queryClient.invalidateQueries({ queryKey: ["searched-customers"] });
+    setSearch(e.target.value);
+
+    if (e.target.value.length > 1) {
+      params.set("keyword", e.target.value);
+    } else {
+      // queryClient.invalidateQueries({ queryKey: ["searched-customers"] });
+      params.delete("keyword");
+    }
+    router.push(`?${params.toString()}`);
+    researchCustomers();
+  };
+
+  // useEffect(
+  //   () =>
+  //     search.length > 1
+  //       ? params.set("keyword", search)
+  //       : params.delete("keyword"),
+  //   [search]
+  // );
+
   return (
     <main className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -67,18 +131,34 @@ export default function Customers() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              disabled={isError || isLoadingCustomers || !customers?.length}
-            >
-              <Filter size={16} />
-              Filter
-            </Button>
+            {/* Filter Dropdown */}
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-gray-500" />
+              <Select
+                value={filter}
+                onValueChange={(value: string) => {
+                  setCurrentPage(1);
+                  setFilter(value);
+                }}
+                disabled={isError || isLoadingCustomers || !customers?.length}
+              >
+                <SelectTrigger className="h-9 w-[140px] rounded-md border border-gray-200 bg-white text-sm px-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <SelectValue placeholder="Filter Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {verificationStatusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
               <input
+                value={search}
+                onChange={handleSearch}
                 type="text"
                 placeholder="Search customers..."
                 className="pl-9 h-9 w-[250px] rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -106,11 +186,11 @@ export default function Customers() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {customers && customers.length > 7 && (
+          {filteredCustomers && filteredCustomers.length > 7 && (
             <div className="px-4 py-2 text-sm text-gray-500">
               Showing {(currentPage - 1) * pageSize + 1}-
-              {Math.min(currentPage * pageSize, customers.length)} of{" "}
-              {customers.length}
+              {Math.min(currentPage * pageSize, filteredCustomers.length)} of{" "}
+              {filteredCustomers.length}
             </div>
           )}
           <div className="overflow-x-auto">
@@ -123,7 +203,7 @@ export default function Customers() {
                         onClick={() => {
                           setIsSelectedAll((state) => !state);
                           setDeleteList(
-                            customers?.map((customer) => customer.id) || []
+                            customers?.map((customer: any) => customer.id) || []
                           );
                         }}
                         checked={isAllSelected}
@@ -135,31 +215,57 @@ export default function Customers() {
                     <th className="p-4 text-left font-medium text-sm text-gray-500">
                       Location
                     </th>
-                    <th className="p-4 text-left font-medium text-sm text-gray-500">
+                    {/* <th className="p-4 text-left font-medium text-sm text-gray-500">
                       Spent
-                    </th>
+                    </th> */}
                     <th className="p-4 text-left font-medium text-sm text-gray-500">
                       Joined
                     </th>
                     <th className="p-4 text-left font-medium text-sm text-gray-500">
-                      Status
+                      Verification Status
                     </th>
-                    <th className="p-4 text-left font-medium text-sm text-gray-500">
+                    {/* <th className="p-4 text-left font-medium text-sm text-gray-500">
                       Actions
-                    </th>
+                    </th> */}
                   </tr>
                 </thead>
               ) : null}
 
               <tbody>
-                {isLoadingCustomers ? (
-                  <tr>
-                    <td className="px-4 py-10" colSpan={7}>
-                      <div className="flex justify-center items-center w-full">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                      </div>
-                    </td>
-                  </tr>
+                {isLoadingCustomers || isSearchingCustomers ? (
+                  <>
+                    {Array.from({ length: pageSize }).map((_, idx) => (
+                      <tr key={idx}>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-6 rounded" />
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <Skeleton className="size-[40px] rounded-full" />
+                            <div>
+                              <Skeleton className="h-4 w-24 mb-1 rounded" />
+                              <Skeleton className="h-3 w-20 rounded" />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-16 rounded" />
+                        </td>
+                        {/* <td className="p-4">
+                          <Skeleton className="h-4 w-16 rounded" />
+                        </td> */}
+                        <td className="p-4">
+                          <Skeleton className="h-4 w-20 rounded" />
+                        </td>
+                        <td className="p-4">
+                          <Skeleton className="h-6 w-20 rounded" />
+                        </td>
+                        {/* <td className="p-4">
+                          <Skeleton className="h-8 w-16 rounded" />
+                        </td> */}
+                      </tr>
+                    ))}
+                  </>
                 ) : isError ? (
                   <tr>
                     <td colSpan={8}>
@@ -169,7 +275,7 @@ export default function Customers() {
                       />
                     </td>
                   </tr>
-                ) : !customers?.length ? (
+                ) : !filteredCustomers?.length ? (
                   <tr>
                     <td colSpan={8}>
                       <Empty
@@ -195,7 +301,7 @@ export default function Customers() {
             </table>
           </div>
           {/* Pagination Controls */}
-          {customers && customers.length > pageSize && (
+          {filteredCustomers && filteredCustomers.length > pageSize && (
             <div className="flex justify-center items-center gap-2 py-4">
               <Button
                 className="size-[35px] rounded-full grid place-items-center"
