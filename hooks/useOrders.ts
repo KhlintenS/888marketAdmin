@@ -1,40 +1,16 @@
+import { getOrders } from "@/lib/api/order";
 import camelCase from "@/utils/camelCase";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-
-// to avoid naming conflict
-import {
-  createOrder as crOrder,
-  getOrders,
-  deleteOrder as removeOrder,
-} from "@/lib/api/order";
+import { deleteOrder as removeOrder } from "@/lib/api/order";
 
 export function useOrders() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
 
-  const { mutate: createCustomer, isPending: isCreatingOrder } = useMutation({
-    mutationFn: crOrder,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      toast.success("Product succesfully created.");
-    },
-    onError: (err: any) => {
-      console.error("Login Error:", err?.message || "Unknown Error");
-      toast.error("An error occured while trying to create the product.");
-    },
-  });
-
-  const { mutate: deleteOrder, isPending: isDeletingOrder } = useMutation({
-    mutationFn: removeOrder,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      toast.success("Product succesfully created.");
-    },
-    onError: (err: any) => {
-      console.error("Login Error:", err?.message || "Unknown Error");
-      toast.error("An error occured while trying to create the product.");
-    },
-  });
+  const keyword = searchParams.get("_filt") || "All";
+  const queryString = searchParams.toString();
 
   const {
     isLoading: isLoadingOrders,
@@ -42,19 +18,31 @@ export function useOrders() {
     isError,
     refetch: refetchOrders,
   } = useQuery({
-    queryKey: ["orders"],
-    queryFn: getOrders,
+    queryKey: ["orders", queryString],
+    queryFn: () => getOrders(keyword),
+    enabled: !!keyword,
+    staleTime: 1000 * 60 * 2, // cache for 2 minutes to avoid refetching too often
+    // keepPreviousData: true,
   });
-  const orders = data?.map((order: any) => {
-    return camelCase(order);
+
+  const orders = data?.map((order: any) => camelCase(order));
+
+  const { mutate: deleteOrder, isPending: isDeletingOrder } = useMutation({
+    mutationFn: removeOrder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast.success("Order successfully deleted.");
+    },
+    onError: (err: any) => {
+      console.error("Delete Error:", err?.message || "Unknown Error");
+      toast.error("An error occurred while deleting the order.");
+    },
   });
 
   return {
-    createCustomer,
     deleteOrder,
     refetchOrders,
     isLoadingOrders,
-    isCreatingOrder,
     isDeletingOrder,
     orders,
     isError,

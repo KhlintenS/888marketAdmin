@@ -1,3 +1,4 @@
+import { useAuth } from "@/context/AuthContext";
 import supabase from "../config/supabase";
 
 export interface LoginCredentials {
@@ -22,6 +23,7 @@ export const loginUser = async ({ email, password }: LoginCredentials) => {
 
       localStorage.setItem("access_token", accessToken);
       localStorage.setItem("refresh_token", refreshToken);
+      localStorage.setItem("user", JSON.stringify(data?.user));
 
       return session.user;
     }

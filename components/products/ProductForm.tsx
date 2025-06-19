@@ -170,9 +170,13 @@ export default function ProductForm() {
       setErrImg("Atleast one product image is required.");
       return null;
     }
-    // console.log(formData);
+    // Set discounted price to original price if not set
     const data = {
       ...formData,
+      price: {
+        ...formData.price,
+        discounted: formData.price.discounted || formData.price.original,
+      },
       imgs,
     };
     pid

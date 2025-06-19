@@ -4,9 +4,27 @@ import { Bell, ChevronDown, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
 import { useLogin } from "@/hooks/useLogin";
 import Image from "next/image";
+import { useAuth } from "@/context/AuthContext";
+import { useCustomers } from "@/hooks/useCustomers";
+import { getCustomerByUUID } from "@/lib/api/customer";
+import { useQuery } from "@tanstack/react-query";
 
 function Header() {
   const { isLogggingIn, data } = useLogin();
+  const { currentUser } = useAuth();
+  const id = currentUser?.id;
+  const { updateCustomerAdminMutate } = useCustomers();
+  const {
+    data: customer,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["customer", id],
+    queryFn: () => getCustomerByUUID(id),
+    enabled: !!id,
+  });
+
+  console.log("customer", customer);
 
   function handleBell() {
     toast.success("Welcome to 888Market");
@@ -28,11 +46,13 @@ function Header() {
         <div className="flex items-center gap-2">
           <Image
             className="w-10 h-10 rounded-full"
-            src="/logo.jpg"
+            src={`${customer?.img_url || customer?.imgUrl || "/logo.jpg"}`}
             width={10}
             height={10}
             alt="logo"
           />
+
+          <p>{customer?.name || customer?.name || "888Market"}</p>
         </div>
       </div>
     </header>

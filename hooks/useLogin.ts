@@ -9,7 +9,7 @@ import { toast } from "sonner";
 export function useLogin() {
   const queryClient = useQueryClient();
   const router = useRouter();
-  const { setAuthenticated } = useAuth();
+  const { setAuthenticated, setCurrentUser, currentUser } = useAuth();
 
   const {
     mutate: login,
@@ -39,5 +39,7 @@ export function useLogin() {
     isError,
     error,
     data,
+    currentUser,
+    setCurrentUser,
   };
 }

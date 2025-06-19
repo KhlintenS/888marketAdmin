@@ -12,22 +12,30 @@ interface Order {
   cityId: number;
 }
 
-export const getOrders = async () => {
+export const getOrders = async (status: string = "All") => {
   try {
-    const { data, error } = await supabase.from("orders").select(`
-      id,
-      status,
-      created_at,
-      customer:customers (
-        name,
-        email,
-        img_url
-      ),
-      product:products (
-        name,
-        price
+    const query = supabase
+      .from("orders")
+      .select(
+        `
+          id,
+          status,
+          created_at,
+          detail,
+          customer:customers (
+            name,
+            email,
+            img_url
+          )
+        `
       )
-    `);
+      .order("created_at", { ascending: false });
+
+    const { data, error } =
+      status && status.toLowerCase() !== "all"
+        ? await query.eq("status", status)
+        : await query;
+
     if (error) throw new Error(error?.message);
 
     return data;
@@ -110,3 +118,22 @@ export const updateOrder = async (Order: any) => {
     return false;
   }
 };
+
+export const updateOrderStatus = async (orderId: number, status: string) => {
+  const { error } = await supabase
+    .from("orders")
+    .update({ status: status.toLowerCase() })
+    .eq("id", orderId);
+  if (error) throw new Error(error.message);
+  return true;
+};
+// };
+
+// export const updateOrderStatus = async (orderId: number, status: string) => {
+//   const { error } = await supabase
+//     .from("orders")
+//     .update({ status: status.toLowerCase() })
+//     .eq("id", orderId);
+//   if (error) throw new Error(error.message);
+//   return true;
+// };

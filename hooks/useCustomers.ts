@@ -4,9 +4,13 @@ import { toast } from "sonner";
 import {
   createCustomer as crCustomer,
   deleteMultipleCustomers,
+  getCustomerByUUID,
   getCustomers,
   deleteCustomer as removeCustomer,
+  searchCustomer,
+  updateCustomerAdmin,
 } from "@/lib/api/customer";
+import { useSearchParams } from "next/navigation";
 
 export function useCustomers() {
   const queryClient = useQueryClient();
@@ -50,6 +54,21 @@ export function useCustomers() {
         toast.error("An error occurred while deleting multiple customers.");
       },
     });
+
+  const { mutate: updateCustomerAdminMutate, isPending: isUpdatingCustomer } =
+    useMutation({
+      mutationFn: ({ id, data }: { id: string; data: any }) =>
+        updateCustomerAdmin(id, data),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["customers"] });
+        toast.success("Customer updated succesfully.");
+      },
+      onError: (err: any) => {
+        console.error("Login Error:", err?.message || "Unknown Error");
+        toast.error("An error occured while trying to update customer.");
+      },
+    });
+
   const {
     isLoading: isLoadingCustomers,
     data,
@@ -63,16 +82,37 @@ export function useCustomers() {
     return camelCase(customer);
   });
 
+  const query = useSearchParams();
+  const keyword = query.get("keyword");
+
+  const {
+    data: searchedCustomers,
+    isLoading: isSearchingCustomers,
+    refetch: researchCustomers,
+    isError: isSearchError,
+  } = useQuery({
+    queryKey: ["searched-customers"],
+    queryFn: () => searchCustomer(keyword || ""),
+    enabled: !!keyword,
+  });
+
+  keyword && console.log("search result", searchedCustomers);
+
   return {
     createCustomer,
     deleteCustomer,
     refetchCustomers,
     deleteCustomers,
+    updateCustomerAdminMutate,
+    researchCustomers,
+    isSearchingCustomers,
     isDeletingCustomers,
     isLoadingCustomers,
     isCreatingCustomer,
     isDeletingCustomer,
     customers,
+    searchedCustomers,
     isError,
+    isSearchError,
   };
 }

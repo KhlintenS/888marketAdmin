@@ -35,6 +35,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     }
 
     const success = onLogin(email, password);
+
     if (!success) {
       setError("Invalid email or password");
     }

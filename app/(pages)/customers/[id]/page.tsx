@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Maximize2 } from "lucide-react";
+import {
+  Check,
+  X,
+  Maximize2,
+  Camera,
+  Video,
+  CameraOff,
+  VideoOff,
+} from "lucide-react";
 import Image from "next/image";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { getCustomer, updateCustomerStatus } from "@/lib/api/customer";
@@ -20,7 +28,7 @@ export default function CustomerDetail() {
 
   const { id } = useParams();
   const { data, isLoading, refetch } = useQuery<any>({
-    queryKey: ["customer"],
+    queryKey: ["customer", id],
     queryFn: () => getCustomer(Number(id)),
   });
   const customer = data;
@@ -63,15 +71,20 @@ export default function CustomerDetail() {
   const closeViewer = () => setViewerOpen(false);
 
   const nextMedia = () =>
-    setViewerIndex((idx) => (idx + 1) % mediaItems.length);
+    setViewerIndex((idx) => (idx + 1) % mediaItems?.length);
 
   const prevMedia = () =>
-    setViewerIndex((idx) => (idx - 1 + mediaItems.length) % mediaItems.length);
+    setViewerIndex(
+      (idx) => (idx - 1 + mediaItems?.length) % mediaItems?.length
+    );
 
   const { mutate: approveCustomer, isPending: isApproving } = useMutation({
     mutationFn: () => updateCustomerStatus(Number(id), "verified"),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customer"] });
+      queryClient.invalidateQueries({
+        queryKey: ["customer"],
+        refetchType: "none",
+      });
       refetch();
       toast.success("Customer approved.");
     },
@@ -99,7 +112,13 @@ export default function CustomerDetail() {
         <Button
           variant="outline"
           className="gap-2"
-          onClick={() => router.push("/customers")}
+          onClick={() => {
+            router.push("/customers");
+            queryClient.invalidateQueries({
+              queryKey: ["customer"],
+              refetchType: "none",
+            });
+          }}
         >
           <ChevronLeft size={18} />
           Back to Customers
@@ -124,24 +143,24 @@ export default function CustomerDetail() {
               <ChevronLeft size={32} />
             </button>
             <div className="flex flex-col items-center">
-              {mediaItems[viewerIndex].type === "image" ? (
+              {mediaItems[viewerIndex]?.type === "image" ? (
                 <Image
-                  src={mediaItems[viewerIndex].src}
-                  alt={mediaItems[viewerIndex].label}
+                  src={mediaItems[viewerIndex]?.src}
+                  alt={mediaItems[viewerIndex]?.label}
                   width={600}
                   height={600}
                   className="max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-lg"
                 />
               ) : (
                 <video
-                  src={mediaItems[viewerIndex].src}
+                  src={mediaItems[viewerIndex]?.src}
                   controls
                   autoPlay
                   className="max-h-[80vh] max-w-[90vw] rounded-lg shadow-lg bg-black"
                 />
               )}
               <div className="mt-4 text-white text-lg font-semibold">
-                {mediaItems[viewerIndex].label}
+                {mediaItems[viewerIndex]?.label}
               </div>
             </div>
             <button
@@ -201,13 +220,13 @@ export default function CustomerDetail() {
                 )}
                 <div className="text-sm text-gray-600">
                   <p className="font-semibold">Joined In</p>
-                  <p className="text-xs text-gray-500 mt-1 font-medium">
+                  <div className="text-xs text-gray-500 mt-1 font-medium">
                     {isLoading ? (
                       <Skeleton className="h-4 w-32 rounded" />
                     ) : (
                       joined
                     )}
-                  </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -238,22 +257,29 @@ export default function CustomerDetail() {
             <div className="mb-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div>
-                  <div className="border border-gray-100 p-3 rounded-md bg-gray-100">
+                  <div className="border border-gray-100 p-3 rounded-md bg-gray-100 min-h-[200px]">
                     {isLoading ? (
                       <Skeleton className="w-full h-[180px] rounded" />
                     ) : (
                       <>
-                        <Image
-                          src={idFront || null}
-                          alt="user-Id"
-                          width={300}
-                          height={300}
-                          className="size-full object-cover"
-                        />
+                        {idFront ? (
+                          <Image
+                            src={idFront}
+                            alt="user-Id"
+                            width={300}
+                            height={300}
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex justify-center flex-col items-center h-full mb-[40px] gap-2">
+                            <p className="text-gray-500">No Front Id</p>
+                            <CameraOff />
+                          </div>
+                        )}
                         <div className="flex justify-center">
                           <div
                             className="flex justify-center mt-1 bg-black/15 hover:bg-black/20 size-[30px] rounded-full items-center cursor-pointer"
-                            onClick={() => openViewer(0)}
+                            onClick={() => idFront && openViewer(0)}
                           >
                             <Maximize2 size={15} />
                           </div>
@@ -266,13 +292,13 @@ export default function CustomerDetail() {
                   </p>
                 </div>
                 <div>
-                  <div className="border border-gray-100 p-3 rounded-md bg-gray-100">
+                  <div className="border border-gray-100 p-3 rounded-md bg-gray-100 min-h-[200px]">
                     {isLoading ? (
                       <Skeleton className="w-full h-[180px] rounded" />
-                    ) : (
+                    ) : videoUrl ? (
                       <>
                         <video
-                          src={videoUrl || null}
+                          src={videoUrl}
                           muted
                           autoPlay
                           className="size-full"
@@ -286,29 +312,50 @@ export default function CustomerDetail() {
                           </div>
                         </div>
                       </>
+                    ) : (
+                      <div className="flex justify-center flex-col items-center h-full mb-[40px] gap-2">
+                        <p className="text-gray-500">No Facial Recognition</p>
+                        <VideoOff />
+                      </div>
                     )}
+                    <div className="flex justify-center">
+                      <div
+                        className="flex justify-center mt-1 bg-black/15 hover:bg-black/20 size-[30px] rounded-full items-center cursor-pointer"
+                        onClick={() => videoUrl && openViewer(1)}
+                      >
+                        <Maximize2 size={15} />
+                      </div>
+                    </div>
                   </div>
                   <p className="text-sm font-semibold text-center m-2 text-blue-800">
                     Facial Recognition
                   </p>
                 </div>
                 <div>
-                  <div className="border border-gray-100 p-3 rounded-md bg-gray-100">
+                  <div className="border border-gray-100 p-3 rounded-md bg-gray-100 min-h-[200px]">
                     {isLoading ? (
                       <Skeleton className="w-full h-[180px] rounded" />
                     ) : (
                       <>
-                        <Image
-                          src={idBack || null}
-                          alt="user-Id"
-                          width={300}
-                          height={300}
-                          className="size-full object-cover"
-                        />
+                        {idBack ? (
+                          <Image
+                            src={idBack}
+                            alt="user-Id"
+                            width={300}
+                            height={300}
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex justify-center flex-col items-center h-full mb-[40px] gap-2">
+                            <p className="text-gray-500">No Back Id</p>
+                            {/* <Camera size={30} /> */}
+                            <CameraOff />
+                          </div>
+                        )}
                         <div className="flex justify-center">
                           <div
                             className="flex justify-center mt-1 bg-black/15 hover:bg-black/20 size-[30px] rounded-full items-center cursor-pointer"
-                            onClick={() => openViewer(2)}
+                            onClick={() => idBack && openViewer(2)}
                           >
                             <Maximize2 size={15} />
                           </div>

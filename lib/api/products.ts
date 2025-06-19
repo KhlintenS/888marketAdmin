@@ -21,6 +21,9 @@ export const getProducts = async () => {
       stock,
       img_urls,
       description,
+      created_by,
+      status,
+      views,
       category:categories (
         id,
         name
@@ -48,8 +51,10 @@ export const postProduct = async (product: any) => {
       imgs,
       category: { id: category_id },
       subcategory: { id: subcategory_id },
+      status,
       description,
     } = product;
+    console.log("porudcut", product);
     const img_urls = await uploadImages(imgs, "products");
     const { data, error } = await supabase.from("products").insert([
       {
@@ -60,6 +65,7 @@ export const postProduct = async (product: any) => {
         category_id,
         subcategory_id,
         description,
+        status,
       },
     ]);
     if (error) throw new Error(error.message);
@@ -135,41 +141,77 @@ export const updateProduct = async (product: any) => {
       category: { id: category_id },
       subcategory: { id: subcategory_id },
       description,
+      status,
     } = product;
-    // console.log(product);
-    // console.log(imgUrls);
-    // console.log(imgs);
-
-    const toBeDeleted = imgUrls.filter((url: string) => {
-      const del = imgs.some((img: any) => img.url === url);
-      return !del;
-    });
+    const toBeDeleted =
+      imgUrls?.filter((url: string) => {
+        const del = imgs.some((img: any) => img.url === url);
+        return !del;
+      }) || [];
     await Promise.all(
-      toBeDeleted.map((url: string) => deleteImage(url, "products"))
+      toBeDeleted?.map((url: string) => deleteImage(url, "products"))
     );
-    const imgsToUpload = imgs.filter((img: any) =>
+    const imgsToUpload = imgs?.filter((img: any) =>
       Object.keys(img).includes("file")
     );
-    console.log("Images to upload:", imgsToUpload);
 
     const img_urls = await uploadImages(imgsToUpload, "products");
-    console.log(img_urls);
+
+    // Only include img_urls in update if there are new images
+    const updateData: any = {
+      name,
+      price,
+      stock,
+      category_id,
+      subcategory_id,
+      description,
+      status,
+    };
+    if (img_urls && Array.isArray(img_urls) && img_urls.length > 0) {
+      updateData.img_urls = img_urls;
+    }
+
     const { data, error } = await supabase
       .from("products")
-      .update({
-        name,
-        price,
-        stock,
-        img_urls,
-        category_id,
-        subcategory_id,
-        description,
-      })
+      .update(updateData)
       .eq("id", id);
     if (error) throw new Error(error?.message);
     return data;
   } catch (err) {
     console.error("Error updating product:", err);
+    throw err;
+  }
+};
+
+export const getProduct = async (val: any, col: string) => {
+  try {
+    const { data, error } = await supabase
+      .from("products")
+      .select(
+        `
+      id,
+      name,
+      price,
+      stock,
+      img_urls,
+      description,
+      created_by,
+      category:categories (
+        id,
+        name
+      ),
+      subcategory:subcategories (
+        id,
+        name
+      )
+    `
+      )
+      .eq(col, val);
+    if (error) throw new Error(error?.message);
+
+    return data;
+  } catch (err) {
+    console.error("Error fetching products:", err);
     throw err;
   }
 };

@@ -1,3 +1,4 @@
+"use client";
 import { Badge } from "@/components/ui/badge";
 import {
   Bell,
@@ -23,9 +24,94 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Image from "next/image";
+import { useAuth } from "@/context/AuthContext";
+import { useCustomers } from "@/hooks/useCustomers";
+import { useQuery } from "@tanstack/react-query";
+import { getCustomerByUUID } from "@/lib/api/customer";
+import React, { useEffect, useState, useRef } from "react";
 
 export default function Settings() {
+  const { currentUser } = useAuth();
+  const id = currentUser?.id;
+  const { updateCustomerAdminMutate } = useCustomers();
+  const {
+    data: customer,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["customer", id],
+    queryFn: () => getCustomerByUUID(id),
+    enabled: !!id,
+  });
+
+  // Form state for controlled inputs
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    location: "",
+    img_url: "",
+    role: "",
+    verification_status: "",
+  });
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+
+  useEffect(() => {
+    if (customer) {
+      setForm({
+        name: customer.name || "",
+        email: customer.email || "",
+        location: customer.location || "",
+        img_url: customer.img_url || customer.imgUrl || "",
+        role: customer.role || "",
+        verification_status: customer.verificationStatus || "",
+      });
+      setPreviewUrl(customer.img_url || customer.imgUrl || "");
+    }
+  }, [customer]);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSave = () => {
+    // Only use snake_case for backend
+    const patchData = {
+      ...form,
+    };
+    console.log("form data", patchData);
+    updateCustomerAdminMutate({
+      id: customer?.id,
+      data: patchData,
+    });
+  };
+
+  // For image selection
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarAreaClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Prevent triggering when clicking the hidden input
+    if (e.target instanceof HTMLInputElement) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm((prev) => ({ ...prev, img_url: reader.result as string }));
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  console.log(form);
+
+  if (isLoading) return <div>Loading...</div>;
+
   return (
     <main className="p-6">
       <div className="mb-6">
@@ -43,14 +129,7 @@ export default function Settings() {
                 <User className="mr-2 h-4 w-4" />
                 Account
               </TabsTrigger>
-              <TabsTrigger value="security" className="justify-start w-full">
-                <Lock className="mr-2 h-4 w-4" />
-                Security
-              </TabsTrigger>
-              {/* <TabsTrigger value="billing" className="justify-start w-full">
-                <CreditCard className="mr-2 h-4 w-4" />
-                Billing
-              </TabsTrigger> */}
+
               <TabsTrigger
                 value="notifications"
                 className="justify-start w-full"
@@ -79,16 +158,31 @@ export default function Settings() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex flex-col md:flex-row gap-4 md:items-center mb-6">
-                    <Image
-                      src="/logo.jpg"
-                      alt="avatar"
-                      width={100}
-                      height={100}
-                    />
+                    <div
+                      className="relative w-[100px] h-[100px] cursor-pointer"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <img
+                        src={previewUrl || "/logo.jpg"}
+                        alt="avatar"
+                        width={100}
+                        height={100}
+                        className="rounded-full object-cover"
+                        style={{ width: 100, height: 100 }}
+                      />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        ref={fileInputRef}
+                        style={{ display: "none" }}
+                        onChange={handleImageChange}
+                        tabIndex={-1}
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-full pointer-events-none">
+                        <span className="text-white text-xs">Change</span>
+                      </div>
+                    </div>
                     <div>
-                      <Button variant="outline" size="sm" className="mb-2">
-                        Change Avatar
-                      </Button>
                       <p className="text-sm text-gray-500">
                         JPG, GIF or PNG. Max size of 800K
                       </p>
@@ -96,76 +190,60 @@ export default function Settings() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="first-name">First Name</Label>
-                      <Input id="first-name" defaultValue="Wolde" />
+                      <Label htmlFor="name">Name</Label>
+                      <Input
+                        id="name"
+                        name="name"
+                        value={form.name}
+                        onChange={handleChange}
+                      />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="last-name">Last Name</Label>
-                      <Input id="last-name" defaultValue="Giyorgis" />
+                      <Label htmlFor="location">Location</Label>
+                      <Input
+                        id="location"
+                        name="location"
+                        value={form.location}
+                        onChange={handleChange}
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
                       id="email"
+                      name="email"
                       type="email"
-                      defaultValue="wolde@example.com"
+                      value={form.email}
+                      onChange={handleChange}
+                      disabled={true}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="company">Company</Label>
-                    <Input id="company" defaultValue="YBS" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bio">Bio</Label>
-                    <textarea
-                      id="bio"
-                      className="w-full min-h-[100px] rounded-md border border-gray-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      defaultValue="An Investor in software products and ecommerce...."
+                    <Label htmlFor="role">Role</Label>
+                    <Input
+                      id="role"
+                      name="role"
+                      value={form.role}
+                      onChange={handleChange}
+                      disabled={true}
                     />
                   </div>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    Save Changes
-                  </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="security" className="mt-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Security Settings</CardTitle>
-                  <CardDescription>
-                    Manage your password and security preferences.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="current-password">Current Password</Label>
-                    <Input id="current-password" type="password" />
+                    <Label htmlFor="verification_status">
+                      Verification Status
+                    </Label>
+                    <Input
+                      id="verification_status"
+                      name="verification_status"
+                      value={form.verification_status}
+                      onChange={handleChange}
+                    />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="new-password">New Password</Label>
-                    <Input id="new-password" type="password" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirm Password</Label>
-                    <Input id="confirm-password" type="password" />
-                  </div>
-                  <div className="pt-4">
-                    <h3 className="text-lg font-medium mb-4">
-                      Two-Factor Authentication
-                    </h3>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Enable 2FA</p>
-                        <p className="text-sm text-gray-500">
-                          Add an extra layer of security to your account
-                        </p>
-                      </div>
-                      <Switch />
-                    </div>
-                  </div>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={handleSave}
+                  >
                     Save Changes
                   </Button>
                 </CardContent>
