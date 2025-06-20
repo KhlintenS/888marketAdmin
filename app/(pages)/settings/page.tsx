@@ -28,6 +28,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useQuery } from "@tanstack/react-query";
 import { getCustomerByUUID } from "@/lib/api/customer";
+import supabase from "@/lib/config/supabase";
 import React, { useEffect, useState, useRef } from "react";
 
 export default function Settings() {
@@ -75,20 +76,9 @@ export default function Settings() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSave = () => {
-    // Only use snake_case for backend
-    const patchData = {
-      ...form,
-    };
-    console.log("form data", patchData);
-    updateCustomerAdminMutate({
-      id: customer?.id,
-      data: patchData,
-    });
-  };
-
   // For image selection
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const handleAvatarAreaClick = (e: React.MouseEvent<HTMLDivElement>) => {
     // Prevent triggering when clicking the hidden input
@@ -99,16 +89,50 @@ export default function Settings() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setForm((prev) => ({ ...prev, img_url: reader.result as string }));
         setPreviewUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  console.log(form);
+  const uploadImageToSupabase = async (file: File, userId: string | number) => {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `customer_${userId}_${Date.now()}.${fileExt}`;
+    const { data, error } = await supabase.storage
+      .from("customer")
+      .upload(fileName, file, { upsert: true });
+    if (error) throw error;
+    // Get public URL
+    const { data: publicUrlData } = supabase.storage
+      .from("customer")
+      .getPublicUrl(fileName);
+    return publicUrlData.publicUrl;
+  };
+
+  const handleSave = async () => {
+    let img_url = form.img_url;
+    if (selectedFile && customer?.id) {
+      try {
+        img_url = await uploadImageToSupabase(selectedFile, customer.id);
+      } catch (e) {
+        alert("Image upload failed");
+        return;
+      }
+    }
+    // Only use snake_case for backend
+    const patchData = {
+      ...form,
+      img_url,
+    };
+    console.log("form data", patchData);
+    updateCustomerAdminMutate({
+      id: customer?.id,
+      data: patchData,
+    });
+  };
 
   if (isLoading) return <div>Loading...</div>;
 
