@@ -24,7 +24,7 @@ import {
 import { toast } from "sonner";
 
 interface Price {
-  original: number;
+  orignal: number;
   discounted: number;
   currency: string;
 }
@@ -69,7 +69,7 @@ export default function ProductForm() {
         name: product.name || "",
         description: product.description || "",
         price: {
-          original: product.price?.original || 0,
+          orignal: product.price?.orignal || 0,
           discounted: product.price?.discounted || 0,
           currency: product.price?.currency || "AED",
         },
@@ -87,7 +87,7 @@ export default function ProductForm() {
     : {
         name: "",
         description: "",
-        price: { original: 0, discounted: 0, currency: "USD" },
+        price: { orignal: 0, discounted: 0, currency: "USD" },
         stock: 0,
         category: { id: undefined, name: "" },
         subcategory: { id: undefined, name: "" },
@@ -175,7 +175,7 @@ export default function ProductForm() {
       ...formData,
       price: {
         ...formData.price,
-        discounted: formData.price.discounted || formData.price.original,
+        discounted: formData.price.discounted || formData.price.orignal,
       },
       imgs,
     };
@@ -335,7 +335,7 @@ export default function ProductForm() {
                     inputMode="decimal"
                     step="0.01"
                     placeholder="...amount"
-                    {...register("price.original", {
+                    {...register("price.orignal", {
                       required: "Original price is required",
                       valueAsNumber: true,
                       validate: (v) =>
@@ -343,9 +343,9 @@ export default function ProductForm() {
                     })}
                     disabled={!isEditable}
                   />
-                  {errors.price?.original && (
+                  {errors.price?.orignal && (
                     <span className="text-red-500 text-xs">
-                      {errors.price.original.message}
+                      {errors.price.orignal.message}
                     </span>
                   )}
                 </div>
