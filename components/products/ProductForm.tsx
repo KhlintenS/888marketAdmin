@@ -221,7 +221,6 @@ export default function ProductForm() {
             <SubmitButton
               isLoading={pid ? isUpdatingProduct : isCreatingProduct}
               label={pid ? "Edit Product" : "Add Product"}
-              disabled={!isEditable}
             />
           </div>
         </div>
