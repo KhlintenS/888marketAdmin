@@ -294,7 +294,6 @@ export default function ProductForm() {
                       <Select
                         value={field.value}
                         onValueChange={(value) => field.onChange(value)}
-                        disabled={!isEditable}
                       >
                         <SelectTrigger className="bg-gray-100 border-0 w-full">
                           <SelectValue placeholder="Select status" />

@@ -74,7 +74,7 @@ export default function Customer({
       <td className="p-4">
         <div className="flex items-center gap-3">
           <Image
-            src={imgUrl}
+            src={imgUrl?.trim()}
             width={100}
             height={100}
             className="size-[40px] rounded-full object-cover"
